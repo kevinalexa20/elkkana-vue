@@ -28,6 +28,7 @@ export const config = {
   databaseId: import.meta.env.VITE_APPWRITE_DATABASE_ID,
   profilesCollectionId: import.meta.env.VITE_APPWRITE_PROFILES_COLLECTION_ID,
   storageBucketId: import.meta.env.VITE_APPWRITE_STORAGE_BUCKET_ID,
+  userDocumentsBucketId: import.meta.env.VITE_APPWRITE_USER_DOCUMENTS_BUCKET_ID,
 }
 
 // Initialize Appwrite client
@@ -39,7 +40,7 @@ client.setEndpoint(config.endpoint).setProject(config.projectId) // Replace with
 export const account = new Account(client)
 export const databases = new Databases(client)
 export const storage = new Storage(client)
-export { ID, Query}
+export { ID, Query }
 
 // Log configuration in development
 if (import.meta.env.DEV) {
