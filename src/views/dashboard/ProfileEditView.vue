@@ -32,16 +32,16 @@ const formData = ref({
 
 const handleFileUpload = (event: Event, fieldName: string) => {
   const target = event.target as HTMLInputElement
-  if (target.files && target.files[0]) {
-    formData.value[fieldName] = target.files[0]
-  }
+  // if (target.files && target.files[0]) {
+  //   formData.value[fieldName] = target.files[0]
+  // }
 }
 
 const handleMultipleFileUpload = (event: Event, fieldName: string) => {
   const target = event.target as HTMLInputElement
-  if (target.files) {
-    formData.value[fieldName] = Array.from(target.files)
-  }
+  // if (target.files) {
+  //   formData.value[fieldName] = Array.from(target.files)
+  // }
 }
 
 const saveProfile = async () => {
