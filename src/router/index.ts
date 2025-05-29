@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
+import { useAuthStore } from '@/stores/authStore'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -51,6 +52,27 @@ const router = createRouter({
     // otherwise, scroll to top
     return { top: 0 }
   },
+})
+
+// Navigation guard
+router.beforeEach(async (to, from, next) => {
+  const authStore = useAuthStore()
+
+  // Wait for auth initialization
+  if (!authStore.isInitialized) {
+    await authStore.initialize()
+  }
+
+  const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
+  const requiresGuest = to.matched.some((record) => record.meta.requiresGuest)
+
+  if (requiresAuth && !authStore.isAuthenticated) {
+    next('/login')
+  } else if (requiresGuest && authStore.isAuthenticated) {
+    next('/dashboard')
+  } else {
+    next()
+  }
 })
 
 export default router

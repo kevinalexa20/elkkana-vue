@@ -1,10 +1,88 @@
 <script setup lang="ts">
+import { useAuth } from '@/composables/useAuth'
+import { useFormValidation } from '@/composables/useFormValidation'
+import { computed } from 'vue'
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 
-const email = ref('')
-const password = ref('')
-const rememberMe = ref(false)
+//form data
+const formData = ref({
+  email: '',
+  password: '',
+  rememberMe: false,
+})
+
+// Composables
+const { login, isLoading, error, clearError } = useAuth()
+const { errors, hasErrors, rules, validateForm, clearErrors } = useFormValidation()
+
+// validation rules
+const validationRules = {
+  email: [rules.required('Email harus diisi'), rules.email()],
+  password: [
+    rules.required('Password harus diisi'),
+    rules.minLength(8, 'Password minimal 8 karakter'),
+  ],
+}
+
+//computed
+const isFormValid = computed(() => {
+  return formData.value.email && formData.value.password && !hasErrors.value
+})
+
+//methods
+const handleSubmit = async () => {
+  console.log('🔄 Form submitted with data:', {
+    email: formData.value.email,
+    password: '***hidden***',
+    rememberMe: formData.value.rememberMe,
+  })
+
+  // Clear previous errors
+  clearErrors()
+  clearError()
+
+  // Validate form - FIXED: Only validate email and password
+  const isValid = validateForm(
+    {
+      email: formData.value.email,
+      password: formData.value.password,
+    },
+    validationRules,
+  )
+
+  console.log('📝 Form validation result:', isValid)
+  console.log('📝 Current errors:', errors.value)
+
+  if (!isValid) {
+    console.log('❌ Form validation failed')
+    return
+  }
+
+  console.log('✅ Form validation passed, attempting login...')
+
+  // Login user
+  const result = await login({
+    email: formData.value.email,
+    password: formData.value.password,
+  })
+
+  if (result.success) {
+    console.log('✅ Login successful:', result.user)
+  } else {
+    console.log('❌ Login failed:', result.error)
+  }
+}
+
+//clear field error
+const clearFieldError = (field: string) => {
+  if (errors.value[field]) {
+    delete errors.value[field]
+  }
+  if (error.value) {
+    clearError()
+  }
+}
 </script>
 
 <template>
@@ -39,7 +117,26 @@ const rememberMe = ref(false)
           <h2 class="card-title text-2xl">Login to your account</h2>
         </div>
 
-        <form @submit.prevent>
+        <!-- Error Alert -->
+        <div v-if="error" class="alert alert-error mb-4">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="stroke-current shrink-0 h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span>{{ error.message }}</span>
+        </div>
+
+        <form @submit.prevent="handleSubmit">
+          <!-- email -->
           <div class="form-control w-full mb-4">
             <label class="label" for="email">
               <span class="label-text">Email</span>
@@ -47,12 +144,19 @@ const rememberMe = ref(false)
             <input
               type="email"
               id="email"
-              v-model="email"
+              v-model="formData.email"
+              @input="clearFieldError('email')"
+              :class="{ 'input-error': errors.email }"
               placeholder="email"
               class="input input-bordered w-full"
+              required
             />
+            <div v-if="errors.email" class="label">
+              <span class="label-text-alt text-error">{{ errors.email }}</span>
+            </div>
           </div>
 
+          <!-- password -->
           <div class="form-control w-full mb-4">
             <label class="label" for="password">
               <span class="label-text">Password</span>
@@ -60,30 +164,46 @@ const rememberMe = ref(false)
             <input
               type="password"
               id="password"
-              v-model="password"
+              v-model="formData.password"
+              @input="clearFieldError('password')"
+              :class="{ 'input-error': errors.password }"
               placeholder="password"
               class="input input-bordered w-full"
+              required
             />
+            <div v-if="errors.password" class="label">
+              <span class="label-text-alt text-error">{{ errors.password }}</span>
+            </div>
           </div>
 
+          <!-- Remember Me & Forgot Password -->
           <div class="flex items-center justify-between mb-6">
             <div class="form-control">
               <label class="label cursor-pointer">
                 <input
                   type="checkbox"
-                  v-model="rememberMe"
+                  v-model="formData.rememberMe"
                   class="checkbox checkbox-primary mr-2"
                 />
                 <span class="label-text">Remember me</span>
               </label>
             </div>
-            <RouterLink to="/forgot-password" class="link link-hover text-sm text-primary"
-              >Forgot password?</RouterLink
-            >
+            <RouterLink to="/forgot-password" class="link link-hover text-sm text-primary">
+              Forgot password?
+            </RouterLink>
           </div>
 
+          <!-- Submit Button -->
           <div class="form-control mt-6">
-            <button type="submit" class="btn btn-neutral">Login</button>
+            <button
+              type="submit"
+              class="btn btn-primary"
+              :class="{ loading: isLoading }"
+              :disabled="isLoading || !isFormValid"
+            >
+              <span v-if="!isLoading">Login</span>
+              <span v-else>Logging in...</span>
+            </button>
           </div>
 
           <div class="divider">OR</div>

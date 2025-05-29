@@ -1,10 +1,67 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useAuth } from '@/composables/useAuth'
+import { useFormValidation } from '@/composables/useFormValidation'
 
-const name = ref('')
-const email = ref('')
-const password = ref('')
+//form data
+const formData = ref({
+  name: '',
+  email: '',
+  password: '',
+})
+
+//composables
+const { register, isLoading, error, clearError } = useAuth()
+const { errors, hasErrors, rules, validateForm, clearErrors } = useFormValidation()
+
+// validation rules
+const validationRules = {
+  name: [rules.required('Nama lengkap harus diisi'), rules.minLength(2, 'Nama minimal 2 karakter')],
+  email: [rules.required('Email harus diisi'), rules.email()],
+  password: [rules.required('Password harus diisi'), rules.password()],
+}
+
+// Computed
+const isFormValid = computed(() => {
+  return formData.value.name && formData.value.email && formData.value.password && !hasErrors.value
+})
+
+// Methods
+const handleSubmit = async () => {
+  // Clear previous errors
+  clearErrors()
+  clearError()
+
+  // Validate form
+  const isValid = validateForm(formData.value, validationRules)
+  if (!isValid) {
+    return
+  }
+
+  // Register user
+  const result = await register({
+    name: formData.value.name,
+    email: formData.value.email,
+    password: formData.value.password,
+  })
+
+  if (result.success) {
+    // Success! User will be automatically redirected to dashboard by useAuth composable
+    console.log('Registration successful:', result.user)
+  }
+  // Error handling is done automatically by the composable
+}
+
+// Clear field error on input
+const clearFieldError = (field: string) => {
+  if (errors.value[field]) {
+    delete errors.value[field]
+  }
+  if (error.value) {
+    clearError()
+  }
+}
 </script>
 
 <template>
@@ -30,21 +87,35 @@ const password = ref('')
             stroke="currentColor"
             stroke-width="2"
           >
-            <!-- <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.12A3.375 3.375 0 1110.5 5.375M10.5 5.375V3m3.375 2.375A3.375 3.375 0 0117.25 9m-2.25-4.12A3.375 3.375 0 0010.5 5.375M10.5 5.375V3"
-            /> -->
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
               d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
             />
           </svg>
-          <h2 class="card-title text-2xl">Signup new account</h2>
+          <h2 class="card-title text-2xl">Register new account to join with us!</h2>
         </div>
 
-        <form @submit.prevent>
+        <!-- Error Alert -->
+        <div v-if="error" class="alert alert-error mb-4">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="stroke-current shrink-0 h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span>{{ error.message }}</span>
+        </div>
+
+        <form @submit.prevent="handleSubmit">
+          <!-- Full Name -->
           <div class="form-control w-full mb-4">
             <label class="label" for="name">
               <span class="label-text">Full Name</span>
@@ -52,12 +123,19 @@ const password = ref('')
             <input
               type="text"
               id="name"
-              v-model="name"
-              placeholder="name"
+              v-model="formData.name"
+              @input="clearFieldError('name')"
+              placeholder="Enter You Full Name"
               class="input input-bordered w-full"
+              :class="{ 'input-error': errors.name }"
+              required
             />
+            <div v-if="errors.name" class="label">
+              <span class="label-text-alt text-error">{{ errors.name }}</span>
+            </div>
           </div>
 
+          <!-- Email -->
           <div class="form-control w-full mb-4">
             <label class="label" for="email">
               <span class="label-text">Email</span>
@@ -65,12 +143,19 @@ const password = ref('')
             <input
               type="email"
               id="email"
-              v-model="email"
+              v-model="formData.email"
+              @input="clearFieldError('email')"
               placeholder="email"
               class="input input-bordered w-full"
+              :class="{ 'input-error': errors.email }"
+              required
             />
+            <div v-if="errors.email">
+              <span></span>
+            </div>
           </div>
 
+          <!-- Password -->
           <div class="form-control w-full mb-4">
             <label class="label" for="password">
               <span class="label-text">Password</span>
@@ -78,10 +163,19 @@ const password = ref('')
             <input
               type="password"
               id="password"
-              v-model="password"
+              v-model="formData.password"
+              @input="clearFieldError('password')"
               placeholder="password"
               class="input input-bordered w-full"
+              :class="{ 'input-error': errors.password }"
+              required
             />
+            <div v-if="errors.password" class="label">
+              <span class="label-text-alt text-error">{{ errors.password }}</span>
+            </div>
+            <div class="label">
+              <span class="label-text-alt">Password minimum 8 characters</span>
+            </div>
           </div>
 
           <div class="form-control mt-6">
