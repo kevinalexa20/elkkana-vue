@@ -1,8 +1,13 @@
+<!-- src/views/dashboard/DashboardView.vue - UPDATED -->
 <script setup lang="ts">
 import { useAuth } from '@/composables/useAuth'
 import { profileService } from '@/services/profileService'
 import { ref, onMounted, computed } from 'vue'
 import { RouterLink } from 'vue-router'
+
+// IMPORT NEW COMPONENTS
+import ApplicationTimeline from '@/components/ApplicationTimeline.vue'
+import type { ApplicationStatus } from '@/types/application'
 
 // Define interfaces for type safety
 interface User {
@@ -20,7 +25,9 @@ interface ProfileData {
   photoFileId: string
   passportFileId: string
   seamanBookFileId: string
-  consentGiven?: boolean // Optional field for consent
+  consentGiven?: boolean
+  applicationStatus?: ApplicationStatus
+  profileLastUpdatedAt?: string
 }
 
 // Composables
@@ -36,35 +43,13 @@ const profileData = ref<ProfileData>({
   passportFileId: '',
   seamanBookFileId: '',
   consentGiven: false,
+  applicationStatus: 'draft',
+  profileLastUpdatedAt: undefined,
 })
-
-// Mock user data - nanti replace dengan Appwrite
-// const profileData = ref<ProfileData>({
-//   fullName: '',
-//   placeOfBirth: '',
-//   dateOfBirth: null,
-//   hasCV: false,
-//   hasPhoto: false,
-//   hasPassport: false,
-//   hasSeamanBook: false,
-//   consentGiven: false,
-// })
 
 const userProfile = ref<any>(null)
 const isLoadingProfile = ref(false)
 const profileError = ref<string | null>(null)
-
-// const profileData = ref<ProfileData>({
-//   fullName: 'John Doe',
-//   placeOfBirth: '',
-//   dateOfBirth: null,
-//   // Dokumen status
-//   hasCV: false,
-//   hasPhoto: false,
-//   hasPassport: false,
-//   hasSeamanBook: false,
-//   // ... dll sesuai blueprint
-// })
 
 // Computed properties
 const profileCompleted = computed(() => {
@@ -76,17 +61,40 @@ const profileCompleted = computed(() => {
     return value !== null && value !== '' && value !== undefined
   })
 
-  return allFieldsFilled && hasRequiredDocs
+  return allFieldsFilled && hasRequiredDocs && profileData.value.consentGiven
 })
 
-const applicationStatus = computed(() => {
-  if (!profileCompleted.value) return 'pending'
-  if (!profileData.value.consentGiven) return 'data_completed'
-  // Check if profile has additional status from database
-  if (userProfile.value?.applicationStatus) {
-    return userProfile.value.applicationStatus
+// UPDATED: Application status based on profile data
+const currentApplicationStatus = computed((): ApplicationStatus => {
+  if (!profileCompleted.value) return 'draft'
+
+  // Return actual status from database if exists
+  if (profileData.value.applicationStatus && profileData.value.applicationStatus !== 'draft') {
+    return profileData.value.applicationStatus
   }
-  return 'data_verified'
+
+  // If profile is completed but no specific status, set as pending
+  return 'pending'
+})
+
+const completionPercentage = computed(() => {
+  let completed = 0
+  let total = 7 // Total required items
+
+  // Required fields (4 items)
+  if (profileData.value.fullName) completed++
+  if (profileData.value.placeOfBirth) completed++
+  if (profileData.value.dateOfBirth) completed++
+  if (profileData.value.consentGiven) completed++
+
+  // Required documents (2 items)
+  if (profileData.value.cvFileId) completed++
+  if (profileData.value.photoFileId) completed++
+
+  // Additional documents (1 item for having any additional docs)
+  if (profileData.value.passportFileId || profileData.value.seamanBookFileId) completed++
+
+  return Math.round((completed / total) * 100)
 })
 
 // Load profile dari database
@@ -94,6 +102,8 @@ const loadUserProfile = async () => {
   if (!user.value?.$id) return
 
   isLoadingProfile.value = true
+  profileError.value = null
+
   try {
     const profile = await profileService.getProfile(user.value.$id)
     userProfile.value = profile
@@ -103,16 +113,22 @@ const loadUserProfile = async () => {
       profileData.value = {
         fullName: profile.fullName || '',
         placeOfBirth: profile.placeOfBirth || '',
-        dateOfBirth: profile.dateOfBirth || null,
-        cvFileId: profile.cvFileId || false,
-        photoFileId: profile.hasPhoto || false,
-        passportFileId: profile.hasPassport || false,
-        seamanBookFileId: profile.hasSeamanBook || false,
+        dateOfBirth: profile.dateOfBirth || '',
+        cvFileId: profile.cvFileId || '',
+        photoFileId: profile.photoFileId || '',
+        passportFileId: profile.passportFileId || '',
+        seamanBookFileId: profile.seamanBookFileId || '',
         consentGiven: profile.consentGiven || false,
+        applicationStatus: profile.applicationStatus || 'draft',
+        profileLastUpdatedAt: profile.profileLastUpdatedAt || profile.$updatedAt,
       }
+
+      console.log('📊 Profile loaded:', profile)
+      console.log('📈 Current application status:', currentApplicationStatus.value)
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to load profile:', error)
+    profileError.value = error.message || 'Failed to load profile'
   } finally {
     isLoadingProfile.value = false
   }
@@ -124,9 +140,13 @@ const handleLogout = async () => {
     const result = await logout()
     if (result.success) {
       console.log('Logout successful')
-      // User will be automatically redirected to home by useAuth composable
     }
   }
+}
+
+// ADDED: Refresh profile data
+const refreshProfile = async () => {
+  await loadUserProfile()
 }
 
 onMounted(() => {
@@ -134,30 +154,6 @@ onMounted(() => {
     loadUserProfile()
   }
 })
-
-const getStatusText = (status: string): string => {
-  const statusMap: Record<string, string> = {
-    pending: 'Menunggu Kelengkapan Data',
-    data_completed: 'Data Lengkap - Menunggu Verifikasi',
-    data_verified: 'Data Terverifikasi',
-    interview_scheduled: 'Interview Terjadwal',
-    hired: 'Diterima',
-    rejected: 'Tidak Lolos',
-  }
-  return statusMap[status] || 'Status Tidak Diketahui'
-}
-
-const getStatusColor = (status: string): string => {
-  const colorMap: Record<string, string> = {
-    pending: 'badge-warning',
-    data_completed: 'badge-info',
-    data_verified: 'badge-primary',
-    interview_scheduled: 'badge-secondary',
-    hired: 'badge-success',
-    rejected: 'badge-error',
-  }
-  return colorMap[status] || 'badge-neutral'
-}
 </script>
 
 <template>
@@ -196,46 +192,97 @@ const getStatusColor = (status: string): string => {
       <div v-else>
         <!-- Header -->
         <div class="mb-8">
-          <h1 class="text-3xl font-bold mb-2">Dashboard</h1>
-          <p class="text-base-content/70">
-            Selamat datang, {{ profileData.fullName || user?.name || 'User' }}
-          </p>
+          <div class="flex justify-between items-start">
+            <div>
+              <h1 class="text-3xl font-bold mb-2">Dashboard</h1>
+              <p class="text-base-content/70">
+                Selamat datang, {{ profileData.fullName || user?.name || 'User' }}
+              </p>
+            </div>
+
+            <button
+              @click="refreshProfile"
+              class="btn btn-ghost btn-sm"
+              :class="{ loading: isLoadingProfile }"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              Refresh
+            </button>
+          </div>
         </div>
 
-        <!-- Rest of template sama seperti sebelumnya... -->
-        <!-- Status Card -->
+        <!-- Profile Completion Card -->
         <div class="card bg-base-100 shadow-xl mb-6">
           <div class="card-body">
-            <h2 class="card-title">Status Lamaran</h2>
-            <div class="flex items-center gap-4 mb-4">
-              <div class="badge" :class="getStatusColor(applicationStatus)">
-                {{ getStatusText(applicationStatus) }}
+            <div class="flex justify-between items-start mb-4">
+              <h2 class="card-title">Kelengkapan Profil</h2>
+              <div
+                class="badge badge-lg"
+                :class="profileCompleted ? 'badge-success' : 'badge-warning'"
+              >
+                {{ completionPercentage }}%
               </div>
             </div>
 
-            <!-- Progress Timeline -->
-            <div class="steps steps-vertical lg:steps-horizontal w-full">
-              <div class="step" :class="{ 'step-primary': profileCompleted }">Data Lengkap</div>
-              <div class="step" :class="{ 'step-primary': applicationStatus === 'data_verified' }">
-                Verifikasi
+            <div class="mb-4">
+              <div class="flex justify-between text-sm mb-1">
+                <span>Progress Kelengkapan</span>
+                <span>{{ completionPercentage }}%</span>
               </div>
-              <div
-                class="step"
-                :class="{ 'step-primary': applicationStatus === 'interview_scheduled' }"
+              <progress
+                class="progress progress-primary w-full"
+                :value="completionPercentage"
+                max="100"
+              ></progress>
+            </div>
+
+            <div v-if="!profileCompleted" class="alert alert-warning">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                class="stroke-current shrink-0 w-6 h-6"
               >
-                Interview
-              </div>
-              <div class="step" :class="{ 'step-primary': applicationStatus === 'hired' }">
-                Hasil
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+              </svg>
+              <span>Lengkapi profil Anda untuk dapat melamar posisi kru kapal</span>
+              <div>
+                <RouterLink to="/profile/edit" class="btn btn-sm btn-primary">
+                  Lengkapi Sekarang
+                </RouterLink>
               </div>
             </div>
           </div>
         </div>
 
+        <!-- Application Timeline - NEW: Replace old status timeline -->
+        <ApplicationTimeline
+          :current-status="currentApplicationStatus"
+          :last-updated="profileData.profileLastUpdatedAt"
+        />
+
         <!-- Profile Summary -->
         <div class="card bg-base-100 shadow-xl mb-6">
           <div class="card-body">
-            <h2 class="card-title">Profil Saya</h2>
+            <h2 class="card-title">Ringkasan Profil</h2>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
@@ -252,54 +299,143 @@ const getStatusColor = (status: string): string => {
               </div>
               <div>
                 <p class="text-sm text-base-content/70">Tanggal Lahir</p>
-                <p class="font-medium">{{ profileData.dateOfBirth || 'Belum diisi' }}</p>
+                <p class="font-medium">
+                  {{
+                    profileData.dateOfBirth
+                      ? new Date(profileData.dateOfBirth).toLocaleDateString('id-ID')
+                      : 'Belum diisi'
+                  }}
+                </p>
               </div>
             </div>
 
-            <!-- Document Checklist -->
-            <div class="divider">Dokumen Wajib</div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
-              <div class="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  :checked="!!profileData.cvFileId"
-                  class="checkbox checkbox-sm"
-                  disabled
-                />
-                <span class="text-sm">CV</span>
+            <!-- Document Status -->
+            <div class="divider">Status Dokumen</div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div
+                class="flex items-center gap-2 p-2 rounded-lg"
+                :class="profileData.cvFileId ? 'bg-success/10' : 'bg-warning/10'"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5"
+                  :class="profileData.cvFileId ? 'text-success' : 'text-warning'"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    v-if="profileData.cvFileId"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                  <path
+                    v-else
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span class="text-sm font-medium">CV</span>
               </div>
-              <div class="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  :checked="!!profileData.photoFileId"
-                  class="checkbox checkbox-sm"
-                  disabled
-                />
-                <span class="text-sm">Pas Foto</span>
+
+              <div
+                class="flex items-center gap-2 p-2 rounded-lg"
+                :class="profileData.photoFileId ? 'bg-success/10' : 'bg-warning/10'"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5"
+                  :class="profileData.photoFileId ? 'text-success' : 'text-warning'"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    v-if="profileData.photoFileId"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                  <path
+                    v-else
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span class="text-sm font-medium">Foto</span>
               </div>
-              <div class="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  :checked="!!profileData.passportFileId"
-                  class="checkbox checkbox-sm"
-                  disabled
-                />
-                <span class="text-sm">Passport</span>
+
+              <div
+                class="flex items-center gap-2 p-2 rounded-lg"
+                :class="profileData.passportFileId ? 'bg-success/10' : 'bg-base-200'"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5"
+                  :class="profileData.passportFileId ? 'text-success' : 'text-base-content/50'"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    v-if="profileData.passportFileId"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                  <path
+                    v-else
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span class="text-sm font-medium">Passport</span>
               </div>
-              <div class="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  :checked="!!profileData.seamanBookFileId"
-                  class="checkbox checkbox-sm"
-                  disabled
-                />
-                <span class="text-sm">Seaman Book</span>
+
+              <div
+                class="flex items-center gap-2 p-2 rounded-lg"
+                :class="profileData.seamanBookFileId ? 'bg-success/10' : 'bg-base-200'"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-5 w-5"
+                  :class="profileData.seamanBookFileId ? 'text-success' : 'text-base-content/50'"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    v-if="profileData.seamanBookFileId"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                  <path
+                    v-else
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span class="text-sm font-medium">Seaman Book</span>
               </div>
             </div>
 
-            <div class="card-actions justify-end">
+            <div class="card-actions justify-end mt-4">
               <RouterLink to="/profile/edit" class="btn btn-primary">
-                {{ profileCompleted ? 'Edit Profil' : 'Lengkapi Profil untuk Melamar' }}
+                {{ profileCompleted ? 'Edit Profil' : 'Lengkapi Profil' }}
               </RouterLink>
             </div>
           </div>
@@ -310,15 +446,81 @@ const getStatusColor = (status: string): string => {
           <div class="card-body">
             <h2 class="card-title">Aksi Cepat</h2>
             <div class="flex flex-wrap gap-2">
-              <RouterLink to="/profile/edit" class="btn btn-outline btn-sm">Edit Profil</RouterLink>
-              <button class="btn btn-outline btn-sm" disabled>Lihat Riwayat</button>
-              <button class="btn btn-outline btn-sm" disabled>Hubungi Support</button>
+              <RouterLink to="/profile/edit" class="btn btn-outline btn-sm">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4 mr-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                  />
+                </svg>
+                Edit Profil
+              </RouterLink>
+
+              <button @click="refreshProfile" class="btn btn-outline btn-sm">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4 mr-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                Refresh Status
+              </button>
+
+              <button class="btn btn-outline btn-sm" disabled>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4 mr-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                  />
+                </svg>
+                Hubungi Support
+              </button>
+
               <button
                 @click="handleLogout"
                 class="btn btn-outline btn-sm btn-error"
                 :class="{ loading: isLoading }"
                 :disabled="isLoading"
               >
+                <svg
+                  v-if="!isLoading"
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4 mr-2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                  />
+                </svg>
                 <span v-if="!isLoading">Logout</span>
                 <span v-else>Logging out...</span>
               </button>
