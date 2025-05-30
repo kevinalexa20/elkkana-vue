@@ -91,7 +91,7 @@ const clearFieldError = (field: string) => {
       <!-- Left Side: Image -->
       <figure class="hidden lg:flex lg:w-1/2">
         <img
-          src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&q=80"
+          src="https://images.unsplash.com/photo-1595510637895-739864fb845f?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
           alt="Login background"
           class="w-full h-full object-cover"
         />

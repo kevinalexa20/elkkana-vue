@@ -32,7 +32,7 @@
 
       <p class="text-xs">Copyright © 2024 - All right reserved</p>
       <a href="#home">
-        <img src="../../../images/top-arrow-Icon.svg" class="h-8 xl:h-12" alt="back-to-top" />
+        <p>back to top</p>
       </a>
     </div>
   </footer>
