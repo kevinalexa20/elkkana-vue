@@ -1,39 +1,72 @@
-# elkkana-vue
+# 🚢 Elkkana Vue - Crew Management Platform
 
-This template should help get you started developing with Vue 3 in Vite.
+A modern web application for maritime crew recruitment and profile management, built with Vue 3, TypeScript, and Appwrite.
 
-## Recommended IDE Setup
+## 🚀 Features
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+- **Authentication**: Secure user registration and login
+- **Profile Management**: Comprehensive crew profile creation with document uploads
+- **Application Tracking**: Real-time application status updates
+- **Responsive Design**: Mobile-first approach with Tailwind CSS
+- **Type Safety**: Full TypeScript implementation
+- **Modern Architecture**: Composables-based Vue 3 with Pinia state management
 
-## Type Support for `.vue` Imports in TS
+## 🛠️ Tech Stack
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
+- **Frontend**: Vue 3 + TypeScript + Vite
+- **Styling**: Tailwind CSS + DaisyUI
+- **State Management**: Pinia
+- **Backend**: Appwrite (BaaS)
+- **Testing**: Vitest + Vue Test Utils
+- **Build Tool**: Vite
 
-## Customize configuration
+## 📦 Installation
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+```bash
+# Clone repository
+git clone [your-repo-url]
+cd elkkana-vue
 
-## Project Setup
-
-```sh
+# Install dependencies
 npm install
-```
 
-### Compile and Hot-Reload for Development
+# Setup environment variables
+cp .env.example .env
+# Fill in your Appwrite credentials
 
-```sh
+# Start development server
 npm run dev
 ```
 
-### Type-Check, Compile and Minify for Production
+## 🧪 Testing
 
-```sh
-npm run build
+```bash
+# Run unit tests
+npm run test:unit
+
+# Run tests in watch mode
+npm run test:unit -- --watch
 ```
 
-### Run Unit Tests with [Vitest](https://vitest.dev/)
+## 🏗️ Build & Deploy
 
-```sh
-npm run test:unit
+```bash
+# Build for production
+npm run build
+
+# Preview build locally
+npm run preview
+```
+
+## 📁 Project Structure
+
+```
+src/
+├── components/          # Reusable Vue components
+├── composables/         # Vue composables for logic reuse
+├── stores/             # Pinia stores
+├── types/              # TypeScript type definitions
+├── utils/              # Utility functions
+├── config/             # App configuration
+└── assets/             # Static assets
 ```

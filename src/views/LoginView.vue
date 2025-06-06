@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useAuth } from '@/composables/useAuth'
+import { useErrorHandler } from '@/composables/useErrorHandler'
 import { useFormValidation } from '@/composables/useFormValidation'
 import { computed } from 'vue'
 import { ref } from 'vue'
@@ -13,8 +14,9 @@ const formData = ref({
 })
 
 // Composables
-const { login, isLoading, error, clearError } = useAuth()
+const { login, isLoading, error } = useAuth()
 const { errors, hasErrors, rules, validateForm, clearErrors } = useFormValidation()
+const { handleError, clearError } = useErrorHandler()
 
 // validation rules
 const validationRules = {
@@ -71,6 +73,10 @@ const handleSubmit = async () => {
     console.log('✅ Login successful:', result.user)
   } else {
     console.log('❌ Login failed:', result.error)
+  }
+
+  if (!result.success) {
+    handleError(result.error)
   }
 }
 

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authService } from '@/services/authService'
 import type { User, AuthError, LoginCredentials, RegisterCredentials } from '@/types/auth'
+import { useErrorHandler } from '@/composables/useErrorHandler'
 
 export const useAuthStore = defineStore('auth', () => {
   // State
@@ -9,6 +10,9 @@ export const useAuthStore = defineStore('auth', () => {
   const isLoading = ref(false)
   const error = ref<AuthError | null>(null)
   const isInitialized = ref(false)
+
+  //global error handler
+  const { handleError } = useErrorHandler()
 
   // Getters
   const isAuthenticated = computed(() => !!user.value)
@@ -26,6 +30,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   const setError = (newError: AuthError | null) => {
     error.value = newError
+    if (newError) {
+      handleError(newError)
+    }
   }
 
   const clearError = () => {
@@ -43,8 +50,10 @@ export const useAuthStore = defineStore('auth', () => {
       const currentUser = await authService.getCurrentUser()
       setUser(currentUser)
     } catch (err: any) {
-      console.log('Auth initialization failed:', err)
-      setUser(null)
+      // const
+      // setUser(null)
+      // handleError(err)
+      setError(err as AuthError)
     } finally {
       setLoading(false)
       isInitialized.value = true
