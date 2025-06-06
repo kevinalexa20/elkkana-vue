@@ -32,16 +32,6 @@ jobs:
                const coredemo = require('@actions/core')
                return await coredemo.getIDToken()
            result-encoding: string
-           
-      - name: Build with environment variables
-        run: npm run build
-        env:
-          VITE_APPWRITE_ENDPOINT: ${{ secrets.VITE_APPWRITE_ENDPOINT }}
-          VITE_APPWRITE_PROJECT_ID: ${{ secrets.VITE_APPWRITE_PROJECT_ID }}
-          VITE_APPWRITE_DATABASE_ID: ${{ secrets.VITE_APPWRITE_DATABASE_ID }}
-          VITE_APPWRITE_PROFILES_COLLECTION_ID: ${{ secrets.VITE_APPWRITE_PROFILES_COLLECTION_ID }}
-          VITE_APPWRITE_STORAGE_BUCKET_ID: ${{ secrets.VITE_APPWRITE_STORAGE_BUCKET_ID }}
-          VITE_APPWRITE_USER_DOCUMENTS_BUCKET_ID: ${{ secrets.VITE_APPWRITE_USER_DOCUMENTS_BUCKET_ID }}
         
       - name: Build And Deploy
         id: builddeploy
@@ -56,6 +46,13 @@ jobs:
           output_location: "dist" # Built app content directory - optional
           github_id_token: ${{ steps.idtoken.outputs.result }}
           ###### End of Repository/Build Configurations ######
+        env:
+          VITE_APPWRITE_ENDPOINT: ${{ secrets.VITE_APPWRITE_ENDPOINT }}
+          VITE_APPWRITE_PROJECT_ID: ${{ secrets.VITE_APPWRITE_PROJECT_ID }}
+          VITE_APPWRITE_DATABASE_ID: ${{ secrets.VITE_APPWRITE_DATABASE_ID }}
+          VITE_APPWRITE_PROFILES_COLLECTION_ID: ${{ secrets.VITE_APPWRITE_PROFILES_COLLECTION_ID }}
+          VITE_APPWRITE_STORAGE_BUCKET_ID: ${{ secrets.VITE_APPWRITE_STORAGE_BUCKET_ID }}
+          VITE_APPWRITE_USER_DOCUMENTS_BUCKET_ID: ${{ secrets.VITE_APPWRITE_USER_DOCUMENTS_BUCKET_ID }}
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
