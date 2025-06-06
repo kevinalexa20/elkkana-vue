@@ -5,12 +5,13 @@ import { profileService } from '@/services/profileService'
 import { fileService } from '@/services/fileService'
 import type { ProfileFormData, DocumentType } from '@/types/profile'
 
-// IMPORT MISSING COMPONENTS & CONFIG
 import DocumentUpload from '@/components/DocumentUpload.vue'
 import { documentCategories } from '@/config/documentConfig'
+import { useErrorHandler } from '@/composables/useErrorHandler'
 
 // Composables
 const { user, isAuthenticated } = useAuth()
+const { handleError, clearError } = useErrorHandler()
 
 // Form data
 const formData = ref<ProfileFormData>({
@@ -88,6 +89,7 @@ const loadProfile = async () => {
       }
     }
   } catch (error) {
+    handleError(error)
     console.error('Failed to load profile:', error)
   } finally {
     isLoading.value = false

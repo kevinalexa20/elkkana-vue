@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import NavBar from '@/components/layout/navbar/NavBar.vue'
+import ErrorToast from './components/ui/ErrorToast.vue'
+import { useErrorHandler } from './composables/useErrorHandler'
+
+const { error, clearError } = useErrorHandler()
 </script>
 
 <template>
@@ -22,6 +26,8 @@ import NavBar from '@/components/layout/navbar/NavBar.vue'
   </header> -->
 
   <RouterView />
+  <!-- Global Error Toast -->
+  <ErrorToast :error="error" :auto-close="true" :duration="6000" @clear="clearError" />
 </template>
 
 <style scoped>
