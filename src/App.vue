@@ -3,16 +3,22 @@ import { RouterLink, RouterView } from 'vue-router'
 import NavBar from '@/components/layout/navbar/NavBar.vue'
 import ErrorToast from './components/ui/ErrorToast.vue'
 import { useErrorHandler } from './composables/useErrorHandler'
+import ErrorBoundary from './components/ui/ErrorBoundary.vue'
+import ErrorTestPanel from '@/components/dev/ErrorTestPanel.vue'
 
 const { error, clearError } = useErrorHandler()
 </script>
 
 <template>
-  <nav class="sticky top-0 z-50">
-    <NavBar />
-  </nav>
-  <!-- <NavBar /> -->
-  <!-- <header>
+  <div id="app">
+    <ErrorBoundary>
+      <nav class="sticky top-0 z-50">
+        <NavBar />
+      </nav>
+    </ErrorBoundary>
+
+    <!-- <NavBar /> -->
+    <!-- <header>
     <img alt="Vue logo" class="logo" src="@/assets/logo.svg" width="125" height="125" />
 
     <div class="wrapper">
@@ -25,9 +31,19 @@ const { error, clearError } = useErrorHandler()
     </div>
   </header> -->
 
-  <RouterView />
-  <!-- Global Error Toast -->
-  <ErrorToast :error="error" :auto-close="true" :duration="6000" @clear="clearError" />
+    <ErrorBoundary>
+      <RouterView />
+    </ErrorBoundary>
+
+    <!-- Error Toast -->
+    <ErrorToast />
+
+    <!-- Development Error Testing Panel -->
+    <ErrorTestPanel />
+
+    <!-- Global Error Toast -->
+    <!-- <ErrorToast :error="error" :auto-close="true" :duration="6000" @clear="clearError" /> -->
+  </div>
 </template>
 
 <style scoped>

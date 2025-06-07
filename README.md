@@ -1,5 +1,7 @@
 # 🚢 Elkkana Vue - Crew Management Platform
 
+www.triekaelkkanacorp.live
+
 A modern web application for maritime crew recruitment and profile management, built with Vue 3, TypeScript, and Appwrite.
 
 ## 🚀 Features
